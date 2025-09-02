@@ -1,0 +1,37 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="个人中心">
+    <section class="mb-8">
+        <h1 class="mb-4 text-2xl font-semibold">个人中心</h1>
+        <div id="info" class="mb-6"></div>
+        <h2 class="mb-2 text-xl">积分流水</h2>
+        <div id="ledger" class="flex flex-col gap-2"></div>
+    </section>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+        const supabase = createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+
+        const info = document.getElementById('info');
+        const ledger = document.getElementById('ledger');
+
+        const user = (await supabase.auth.getUser()).data.user;
+        if (!user) {
+            info.innerHTML = '<p>请先登录。</p>';
+        } else {
+            const { data: p } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
+            info.innerHTML = `<div class="p-4 rounded-lg bg-black/20"><p>用户：${user.email}</p><p>等级：${p?.level ?? '-'} 积分：${p?.total_points ?? 0}</p></div>`;
+
+            const { data: rows } = await supabase.from('points_ledger').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(50);
+            ledger.innerHTML = '';
+            (rows || []).forEach((r) => {
+                const d = document.createElement('div');
+                d.className = 'p-3 rounded bg-black/10';
+                d.textContent = `${new Date(r.created_at).toLocaleString()} · ${r.event} · ${r.delta > 0 ? '+' : ''}${r.delta}`;
+                ledger.appendChild(d);
+            });
+        }
+    </script>
+</Layout>

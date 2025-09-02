@@ -3,7 +3,12 @@
 ---
 
 <footer class="pt-16 pb-12 sm:pt-24 sm:pb-16">
-    <p class="text-sm">
-        <a href="https://docs.netlify.com/frameworks/astro/" class="decoration-dashed text-primary underline-offset-8"> Astro on Netlify </a>
-    </p>
+    <div class="text-sm flex flex-col gap-2">
+        <p>© {new Date().getFullYear()} AI 编程新闻站</p>
+        <p class="flex gap-4 flex-wrap">
+            <a href="/privacy" class="decoration-dashed text-primary underline-offset-8">隐私政策</a>
+            <a href="/terms" class="decoration-dashed text-primary underline-offset-8">服务协议</a>
+            <a href="/about" class="decoration-dashed text-primary underline-offset-8">关于我们</a>
+        </p>
+    </div>
 </footer>

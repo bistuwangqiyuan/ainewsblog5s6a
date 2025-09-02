@@ -1,0 +1,150 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="社区 · 问答">
+    <section class="mb-8">
+        <h1 class="mb-4 text-2xl font-semibold">社区 · 问答</h1>
+        <div class="tabs flex gap-2 mb-4">
+            <button id="tabForum" class="btn">论坛</button>
+            <button id="tabQA" class="btn">问答</button>
+            <a class="btn" href="/submit">发帖/提问</a>
+        </div>
+
+        <div id="postList" class="flex flex-col gap-4"></div>
+        <div class="flex items-center gap-2 mt-4">
+            <button id="prevPage" class="btn">上一页</button>
+            <span id="pageInfo" class="text-sm"></span>
+            <button id="nextPage" class="btn">下一页</button>
+        </div>
+    </section>
+
+    <script type="module">
+        import { supabase } from '../utils/supabaseClient.js';
+        const pageSize = 10;
+        let page = 1;
+        let type = 'forum';
+
+        const el = {
+            list: document.getElementById('postList'),
+            prev: document.getElementById('prevPage'),
+            next: document.getElementById('nextPage'),
+            info: document.getElementById('pageInfo'),
+            tabForum: document.getElementById('tabForum'),
+            tabQA: document.getElementById('tabQA')
+        };
+
+        function render(items) {
+            el.list.innerHTML = '';
+            items.forEach((p) => {
+                const card = document.createElement('article');
+                card.className = 'p-4 rounded-lg bg-black/20';
+                card.innerHTML = `
+                    <h3 class="text-lg font-semibold mb-1">${p.title}</h3>
+                    <p class="text-sm opacity-80 mb-2">${(p.body || '').slice(0, 200)}</p>
+                    <p class="text-xs opacity-70">作者：${p.user_id?.slice(0, 8)} · 时间：${new Date(p.created_at).toLocaleString()}</p>
+                    <div class="mt-2 flex gap-3 text-sm">
+                        <button class="like btn btn-sm" data-id="${p.id}">点赞</button>
+                        <button class="fav btn btn-sm" data-id="${p.id}">收藏</button>
+                        <button class="report btn btn-sm" data-id="${p.id}">举报</button>
+                        <a class="btn btn-sm" href="/post/${p.id}">查看</a>
+                    </div>
+                `;
+                el.list.appendChild(card);
+            });
+            bind();
+        }
+
+        function bind() {
+            el.list.querySelectorAll('button.like').forEach((b) =>
+                b.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    await upsert('likes', { target_type: 'post', target_id: id });
+                })
+            );
+            el.list.querySelectorAll('button.fav').forEach((b) =>
+                b.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    await upsert('favorites', { target_type: 'post', target_id: id });
+                })
+            );
+            el.list.querySelectorAll('button.report').forEach((b) =>
+                b.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    const reason = prompt('请输入举报原因');
+                    if (!reason) return;
+                    await insert('reports', { target_type: 'post', target_id: id, reason });
+                })
+            );
+        }
+
+        async function upsert(table, payload) {
+            const user = (await supabase.auth.getUser()).data.user;
+            if (!user) {
+                alert('请先登录');
+                return;
+            }
+            const { error } = await supabase.from(table).upsert({ user_id: user.id, ...payload });
+            if (error) alert(error.message);
+            else alert('成功');
+        }
+
+        async function insert(table, payload) {
+            const user = (await supabase.auth.getUser()).data.user;
+            if (!user) {
+                alert('请先登录');
+                return;
+            }
+            const { error } = await supabase.from(table).insert({ user_id: user.id, ...payload });
+            if (error) alert(error.message);
+            else alert('已提交');
+        }
+
+        async function fetchPage() {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+            const { data, error, count } = await supabase
+                .from('posts')
+                .select('*', { count: 'exact' })
+                .eq('type', type)
+                .order('created_at', { ascending: false })
+                .range(from, to);
+            if (error) {
+                alert(error.message);
+                return;
+            }
+            render(data || []);
+            const total = Math.max(1, Math.ceil((count || 0) / pageSize));
+            el.info.textContent = `第 ${page} / ${total} 页`;
+            el.prev.disabled = page <= 1;
+            el.next.disabled = page >= total;
+        }
+
+        el.prev.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (page > 1) {
+                page--;
+                fetchPage();
+            }
+        });
+        el.next.addEventListener('click', (e) => {
+            e.preventDefault();
+            page++;
+            fetchPage();
+        });
+        el.tabForum.addEventListener('click', (e) => {
+            e.preventDefault();
+            type = 'forum';
+            page = 1;
+            fetchPage();
+        });
+        el.tabQA.addEventListener('click', (e) => {
+            e.preventDefault();
+            type = 'qa';
+            page = 1;
+            fetchPage();
+        });
+
+        await fetchPage();
+    </script>
+</Layout>

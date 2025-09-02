@@ -1,0 +1,114 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="投稿 / 提问">
+    <section class="mb-8">
+        <h1 class="mb-4 text-2xl font-semibold">投稿 / 提问</h1>
+        <form id="form" class="flex flex-col gap-3 max-w-2xl">
+            <input id="title" class="input" placeholder="标题（必填）" />
+            <textarea id="body" class="input min-h-40" placeholder="正文（≥3 字，自动敏感词检测）"></textarea>
+            <div>
+                <label class="block mb-2">上传附件（图片/视频，≤10MB）</label>
+                <input id="file" type="file" multiple />
+            </div>
+            <div class="flex gap-2">
+                <button id="postBtn" class="btn">发布为论坛贴</button>
+                <button id="qaBtn" class="btn">发布为问答</button>
+            </div>
+        </form>
+    </section>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+        const MAX_SIZE = 10 * 1024 * 1024;
+        const IMG = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        const VID = ['video/mp4', 'video/webm'];
+        const WL = [...IMG, ...VID];
+        const BAD = ['涉政', '暴恐', '违禁', '黄赌毒']; // 示例敏感词
+
+        const supabase = createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+
+        const el = {
+            title: document.getElementById('title'),
+            body: document.getElementById('body'),
+            file: document.getElementById('file'),
+            postBtn: document.getElementById('postBtn'),
+            qaBtn: document.getElementById('qaBtn')
+        };
+
+        function hasBadWords(text) {
+            if (!text) return false;
+            const t = String(text);
+            return BAD.some((w) => t.includes(w));
+        }
+
+        function validateFiles(files) {
+            for (const f of files) {
+                if (f.size > MAX_SIZE) return `文件过大：${f.name}`;
+                if (!WL.includes(f.type)) return `不支持的类型：${f.name}`;
+            }
+            return '';
+        }
+
+        async function handleSubmit(type) {
+            const user = (await supabase.auth.getUser()).data.user;
+            if (!user) {
+                alert('请先登录');
+                return;
+            }
+            const title = el.title.value?.trim();
+            const body = el.body.value?.trim();
+            if (!title) {
+                alert('标题必填');
+                return;
+            }
+            if (!body || body.length < 3) {
+                alert('正文至少 3 字');
+                return;
+            }
+            if (hasBadWords(title) || hasBadWords(body)) {
+                alert('包含敏感词，已拦截');
+                return;
+            }
+
+            const { data: post, error } = await supabase.from('posts').insert({ user_id: user.id, type, title, body }).select().single();
+            if (error) {
+                alert(error.message);
+                return;
+            }
+
+            const files = el.file.files || [];
+            const msg = validateFiles(files);
+            if (msg) {
+                alert(msg);
+                return;
+            }
+            for (const f of files) {
+                const path = `${user.id}/${post.id}/${Date.now()}_${encodeURIComponent(f.name)}`;
+                const { error: upErr } = await supabase.storage.from('public-uploads').upload(path, f, { upsert: false });
+                if (upErr) {
+                    alert(upErr.message);
+                    return;
+                }
+                const { data: urlData } = supabase.storage.from('public-uploads').getPublicUrl(path);
+                await supabase
+                    .from('attachments')
+                    .insert({ user_id: user.id, target_type: 'post', target_id: post.id, url: urlData.publicUrl, mime: f.type, size: f.size });
+            }
+
+            alert('发布成功');
+            location.href = `/community`;
+        }
+
+        el.postBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await handleSubmit('forum');
+        });
+        el.qaBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await handleSubmit('qa');
+        });
+    </script>
+</Layout>

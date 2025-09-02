@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify"
+  node_bundler = "esbuild"
+
+[[scheduled.functions]]
+  name = "crawler"
+  schedule = "0 2 * * *" # UTC 每日定时
+
+

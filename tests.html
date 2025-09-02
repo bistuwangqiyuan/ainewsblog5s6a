@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>前端测试</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <h1>前端测试</h1>
+    <pre id="out"></pre>
+    <script type="module">
+      import { hasBadWords, validateUpload } from './src/utils/contentSafety.js';
+      const out = document.getElementById('out');
+      function log(name, ok, msg=''){ out.textContent += `${ok?'✓':'✗'} ${name} ${msg}\n`; }
+
+      // 期望用例
+      log('hasBadWords-安全文本', hasBadWords('hello', ['坏词']) === false);
+      // 边界用例
+      log('hasBadWords-空文本', hasBadWords('', ['坏']) === false);
+      // 失败用例
+      log('hasBadWords-命中', hasBadWords('这里有坏词', ['坏词']) === true);
+
+      const blobOk = new Blob(['ok'], { type:'text/plain' }); blobOk.name = 'ok.txt';
+      const blobBad = new Blob(['bad'], { type:'application/x-bad' }); blobBad.name = 'bad.bin';
+      log('validateUpload-通过', validateUpload(blobOk, ['text/plain'], 1024) === '');
+      log('validateUpload-类型拒绝', !!validateUpload(blobBad, ['text/plain'], 1024));
+      const big = new Blob([new Uint8Array(1025)], { type:'text/plain' }); big.name='big.txt';
+      log('validateUpload-超大拒绝', !!validateUpload(big, ['text/plain'], 1024));
+    </script>
+  </body>
+</html>
+
+

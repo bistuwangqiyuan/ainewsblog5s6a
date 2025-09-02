@@ -1,21 +1,178 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import ContextAlert from '../components/ContextAlert.astro';
-import Markdown from '../components/Markdown.astro';
-
-const explainer = `
-An Astro website can go way beyond static pages - on the right platform.
-
-Netlify supports not only [Streaming SSR](https://docs.astro.build/en/guides/server-side-rendering/#html-streaming) and fast [Edge Middleware](https://docs.astro.build/en/guides/middleware/), but also [on-demand revalidation](https://www.netlify.com/blog/cache-tags-and-purge-api-on-netlify/) and [stale-while-revalidate](https://www.netlify.com/blog/swr-and-fine-grained-cache-control/). 
-Any page or data can be rebuilt only when needed, without site visitors ever getting a performance hit.
-`;
 ---
 
-<Layout title="Welcome to Astro.">
-    <ContextAlert class="mb-8" />
-    <h1 class="mb-10">Netlify Platform Starter for Astro</h1>
-    <Markdown content={explainer} class="mb-10 text-lg" />
-    <p>
-        <a href="https://docs.netlify.com/frameworks/astro/" class="btn btn-lg sm:min-w-64">Read the Docs</a>
-    </p>
+<Layout title="AI 编程新闻">
+    <section class="mb-8">
+        <h1 class="mb-4 text-2xl font-semibold">最新 AI 编程资讯</h1>
+        <form id="filters" class="flex flex-wrap gap-2 mb-4">
+            <input id="kw" class="input" placeholder="关键词" />
+            <select id="source" class="input">
+                <option value="">全部来源</option>
+            </select>
+            <select id="time" class="input">
+                <option value="">全部时间</option>
+                <option value="24h">近24小时</option>
+                <option value="7d">近7天</option>
+                <option value="30d">近30天</option>
+            </select>
+            <button id="searchBtn" class="btn">搜索</button>
+        </form>
+        <div id="newsList" class="flex flex-col gap-4"></div>
+        <div class="flex items-center gap-2 mt-4">
+            <button id="prevPage" class="btn">上一页</button>
+            <span id="pageInfo" class="text-sm"></span>
+            <button id="nextPage" class="btn">下一页</button>
+        </div>
+    </section>
+
+    <script type="module">
+        import { supabase } from '../utils/supabaseClient.js';
+
+        const pageSize = 10;
+        let page = 1;
+
+        const el = {
+            kw: document.getElementById('kw'),
+            source: document.getElementById('source'),
+            time: document.getElementById('time'),
+            list: document.getElementById('newsList'),
+            prev: document.getElementById('prevPage'),
+            next: document.getElementById('nextPage'),
+            info: document.getElementById('pageInfo'),
+            searchBtn: document.getElementById('searchBtn')
+        };
+
+        function timeRangeFilter(col = 'published_at') {
+            const v = el.time.value;
+            if (!v) return null;
+            const now = new Date();
+            const start = new Date(now);
+            if (v === '24h') start.setDate(now.getDate() - 1);
+            if (v === '7d') start.setDate(now.getDate() - 7);
+            if (v === '30d') start.setDate(now.getDate() - 30);
+            return { col, gte: start.toISOString() };
+        }
+
+        async function loadSources() {
+            const { data, error } = await supabase.from('news_items').select('source').not('source', 'is', null).order('source').limit(2000);
+            if (error) return;
+            const uniq = [...new Set((data || []).map((x) => x.source).filter(Boolean))];
+            uniq.forEach((s) => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                el.source.appendChild(opt);
+            });
+        }
+
+        function renderItems(items) {
+            el.list.innerHTML = '';
+            items.forEach((it) => {
+                const card = document.createElement('article');
+                card.className = 'p-4 rounded-lg bg-black/20';
+                card.innerHTML = `
+                    <h3 class="text-lg font-semibold mb-1"><a target="_blank" rel="noopener" href="${it.url}">${it.title || '未命题'}</a></h3>
+                    <p class="text-sm opacity-80 mb-2">${it.summary || ''}</p>
+                    <p class="text-xs opacity-70">来源：${it.source || '-'} · 时间：${new Date(it.published_at || it.created_at).toLocaleString()}</p>
+                    <div class="mt-2 flex gap-3 text-sm">
+                        <button class="like btn btn-sm" data-id="${it.id}">点赞</button>
+                        <button class="fav btn btn-sm" data-id="${it.id}">收藏</button>
+                        <button class="report btn btn-sm" data-id="${it.id}">举报</button>
+                    </div>
+                `;
+                el.list.appendChild(card);
+            });
+            bindCardActions();
+        }
+
+        function bindCardActions() {
+            el.list.querySelectorAll('button.like').forEach((b) =>
+                b.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    await upsertAction('likes', { target_type: 'news', target_id: id });
+                })
+            );
+            el.list.querySelectorAll('button.fav').forEach((b) =>
+                b.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    await upsertAction('favorites', { target_type: 'news', target_id: id });
+                })
+            );
+            el.list.querySelectorAll('button.report').forEach((b) =>
+                b.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    const reason = prompt('请输入举报原因');
+                    if (!reason) return;
+                    await insertAction('reports', { target_type: 'news', target_id: id, reason });
+                })
+            );
+        }
+
+        async function upsertAction(table, payload) {
+            const user = (await supabase.auth.getUser()).data.user;
+            if (!user) {
+                alert('请先登录');
+                return;
+            }
+            const { error } = await supabase.from(table).upsert({ user_id: user.id, ...payload });
+            if (error) alert(error.message);
+            else alert('成功');
+        }
+
+        async function insertAction(table, payload) {
+            const user = (await supabase.auth.getUser()).data.user;
+            if (!user) {
+                alert('请先登录');
+                return;
+            }
+            const { error } = await supabase.from(table).insert({ user_id: user.id, ...payload });
+            if (error) alert(error.message);
+            else alert('已提交');
+        }
+
+        async function fetchPage() {
+            const from = (page - 1) * pageSize;
+            const to = from + pageSize - 1;
+            let q = supabase.from('news_items').select('*', { count: 'exact' }).order('published_at', { ascending: false });
+            const kw = el.kw.value?.trim();
+            if (kw) q = q.ilike('title', `%${kw}%`);
+            const src = el.source.value;
+            if (src) q = q.eq('source', src);
+            const tf = timeRangeFilter();
+            if (tf) q = q.gte(tf.col, tf.gte);
+            q = q.range(from, to);
+            const { data, error, count } = await q;
+            if (error) {
+                alert('加载失败：' + error.message);
+                return;
+            }
+            renderItems(data || []);
+            const totalPages = Math.max(1, Math.ceil((count || 0) / pageSize));
+            el.info.textContent = `第 ${page} / ${totalPages} 页`;
+            el.prev.disabled = page <= 1;
+            el.next.disabled = page >= totalPages;
+        }
+
+        el.prev.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (page > 1) {
+                page--;
+                fetchPage();
+            }
+        });
+        el.next.addEventListener('click', (e) => {
+            e.preventDefault();
+            page++;
+            fetchPage();
+        });
+        el.searchBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            page = 1;
+            fetchPage();
+        });
+
+        await loadSources();
+        await fetchPage();
+    </script>
 </Layout>

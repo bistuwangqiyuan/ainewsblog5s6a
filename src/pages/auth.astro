@@ -1,0 +1,72 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="登录 / 注册">
+    <section class="mb-8 max-w-md">
+        <h1 class="mb-4 text-2xl font-semibold">登录 / 注册</h1>
+        <form id="form" class="flex flex-col gap-3">
+            <input id="email" class="input" type="email" placeholder="邮箱" />
+            <input id="password" class="input" type="password" placeholder="密码（≥6位）" />
+            <div class="flex gap-2">
+                <button id="login" class="btn">登录</button>
+                <button id="signup" class="btn">注册</button>
+                <button id="logout" class="btn">退出</button>
+            </div>
+        </form>
+    </section>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+        const supabase = createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+        const el = {
+            email: document.getElementById('email'),
+            password: document.getElementById('password'),
+            login: document.getElementById('login'),
+            signup: document.getElementById('signup'),
+            logout: document.getElementById('logout')
+        };
+
+        function valid() {
+            const email = el.email.value?.trim();
+            const pw = el.password.value?.trim();
+            if (!email || !pw || pw.length < 6) {
+                alert('请输入邮箱与不少于 6 位的密码');
+                return null;
+            }
+            return { email, pw };
+        }
+
+        el.login.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const v = valid();
+            if (!v) return;
+            const { error } = await supabase.auth.signInWithPassword({ email: v.email, password: v.pw });
+            if (error) alert(error.message);
+            else {
+                alert('登录成功');
+                location.href = '/';
+            }
+        });
+        el.signup.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const v = valid();
+            if (!v) return;
+            const { data, error } = await supabase.auth.signUp({ email: v.email, password: v.pw });
+            if (error) {
+                alert(error.message);
+                return;
+            }
+            const uid = data.user?.id;
+            if (uid) {
+                await supabase.from('profiles').upsert({ user_id: uid, total_points: 0, level: 1 });
+            }
+            alert('注册成功，请查收验证邮件（如需）');
+        });
+        el.logout.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await supabase.auth.signOut();
+            alert('已退出');
+        });
+    </script>
+</Layout>

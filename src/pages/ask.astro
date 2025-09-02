@@ -1,0 +1,41 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="AI 专家问答">
+    <section class="mb-8 max-w-2xl">
+        <h1 class="mb-4 text-2xl font-semibold">AI 专家问答</h1>
+        <form id="form" class="flex flex-col gap-3">
+            <textarea id="q" class="input min-h-40" placeholder="请输入你的问题"></textarea>
+            <button id="ask" class="btn">提问</button>
+        </form>
+        <div id="answer" class="mt-6 p-4 rounded-lg bg-black/20 whitespace-pre-wrap"></div>
+    </section>
+    <script type="module">
+        const q = document.getElementById('q');
+        const ask = document.getElementById('ask');
+        const ans = document.getElementById('answer');
+        ask.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const content = q.value?.trim();
+            if (!content) {
+                alert('请输入问题');
+                return;
+            }
+            ans.textContent = '思考中...';
+            try {
+                const r = await fetch('/.netlify/functions/aiProxy', {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({ messages: [{ role: 'user', content }] })
+                });
+                const data = await r.json();
+                // 适配 OpenAI 样式返回
+                const txt = data?.choices?.[0]?.message?.content || JSON.stringify(data);
+                ans.textContent = txt;
+            } catch (e) {
+                ans.textContent = '调用失败：' + (e?.message || e);
+            }
+        });
+    </script>
+</Layout>

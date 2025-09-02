@@ -1,0 +1,87 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="用户反馈">
+    <section class="mb-8">
+        <h1 class="mb-4 text-2xl font-semibold">用户反馈</h1>
+        <form id="form" class="flex flex-col gap-3 max-w-2xl">
+            <input id="title" class="input" placeholder="主题（必填）" />
+            <textarea id="content" class="input min-h-40" placeholder="反馈内容（≥3 字）"></textarea>
+            <div>
+                <label class="block mb-2">附件（≤10MB，pdf/txt/md/doc/docx/zip）</label>
+                <input id="file" type="file" multiple />
+            </div>
+            <button id="submit" class="btn">提交</button>
+        </form>
+    </section>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+        const supabase = createClient(import.meta.env.PUBLIC_SUPABASE_URL, import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+        const MAX_SIZE = 10 * 1024 * 1024;
+        const WL = [
+            'application/pdf',
+            'text/plain',
+            'text/markdown',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/zip'
+        ];
+
+        const el = {
+            title: document.getElementById('title'),
+            content: document.getElementById('content'),
+            file: document.getElementById('file'),
+            submit: document.getElementById('submit')
+        };
+
+        function validate() {
+            const t = el.title.value?.trim();
+            const c = el.content.value?.trim();
+            if (!t || !c || c.length < 3) return '请完善主题与内容';
+            for (const f of el.file.files || []) {
+                if (f.size > MAX_SIZE) return `文件过大：${f.name}`;
+                if (!WL.includes(f.type)) return `不支持类型：${f.name}`;
+            }
+            return '';
+        }
+
+        el.submit.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const user = (await supabase.auth.getUser()).data.user;
+            if (!user) {
+                alert('请先登录');
+                return;
+            }
+            const msg = validate();
+            if (msg) {
+                alert(msg);
+                return;
+            }
+            const { data: fb, error } = await supabase
+                .from('feedback')
+                .insert({ user_id: user.id, title: el.title.value.trim(), content: el.content.value.trim() })
+                .select()
+                .single();
+            if (error) {
+                alert(error.message);
+                return;
+            }
+            for (const f of el.file.files || []) {
+                const path = `${user.id}/feedback/${fb.id}/${Date.now()}_${encodeURIComponent(f.name)}`;
+                const { error: upErr } = await supabase.storage.from('private-uploads').upload(path, f, { upsert: false });
+                if (upErr) {
+                    alert(upErr.message);
+                    return;
+                }
+                const { data: urlData } = await supabase.storage.from('private-uploads').createSignedUrl(path, 60 * 60);
+                await supabase
+                    .from('attachments')
+                    .insert({ user_id: user.id, target_type: 'feedback', target_id: fb.id, url: urlData.signedUrl, mime: f.type, size: f.size });
+            }
+            alert('感谢反馈！');
+            el.form?.reset?.();
+        });
+    </script>
+</Layout>

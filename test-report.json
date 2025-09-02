@@ -1,0 +1,197 @@
+{
+  "generatedAt": "2025-08-31T06:28:41.500Z",
+  "deployUrl": null,
+  "supabaseUrl": "https://zzyueuweeoakopuuwfau.supabase.co",
+  "passed": 26,
+  "failed": 1,
+  "warned": 1,
+  "skipped": 3,
+  "results": [
+    {
+      "id": "B1",
+      "name": "dist/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.about",
+      "name": "dist/about/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.ask",
+      "name": "dist/ask/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.auth",
+      "name": "dist/auth/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.community",
+      "name": "dist/community/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.feedback",
+      "name": "dist/feedback/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.image-cdn",
+      "name": "dist/image-cdn/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.messages",
+      "name": "dist/messages/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.post",
+      "name": "dist/post/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.privacy",
+      "name": "dist/privacy/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.profile",
+      "name": "dist/profile/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.submit",
+      "name": "dist/submit/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "B1.terms",
+      "name": "dist/terms/index.html 存在",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S0",
+      "name": "Supabase 连接可用",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.news_items",
+      "name": "存在表 news_items",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.posts",
+      "name": "存在表 posts",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.comments",
+      "name": "存在表 comments",
+      "status": "fail",
+      "details": "infinite recursion detected in policy for relation \"users\""
+    },
+    {
+      "id": "S1.likes",
+      "name": "存在表 likes",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.favorites",
+      "name": "存在表 favorites",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.reports",
+      "name": "存在表 reports",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.attachments",
+      "name": "存在表 attachments",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.feedback",
+      "name": "存在表 feedback",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.messages",
+      "name": "存在表 messages",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.notifications",
+      "name": "存在表 notifications",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.profiles",
+      "name": "存在表 profiles",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.points_ledger",
+      "name": "存在表 points_ledger",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S1.user_levels",
+      "name": "存在表 user_levels",
+      "status": "pass",
+      "details": ""
+    },
+    {
+      "id": "S2",
+      "name": "近24小时 news_items 数量 ≥ 100",
+      "status": "warn",
+      "details": "数量未达 100（可能需等待定时任务积累或检查抓取源可用性）"
+    },
+    {
+      "id": "R0",
+      "name": "远程站点首页可访问",
+      "status": "skip",
+      "details": "缺少 DEPLOY_URL"
+    },
+    {
+      "id": "R1",
+      "name": "crawler 函数可调用",
+      "status": "skip",
+      "details": "缺少 DEPLOY_URL"
+    },
+    {
+      "id": "R2",
+      "name": "aiProxy 函数可达（方法约束）",
+      "status": "skip",
+      "details": "缺少 DEPLOY_URL"
+    }
+  ]
+}
