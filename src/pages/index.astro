@@ -68,6 +68,13 @@ import Layout from '../layouts/Layout.astro';
 
         function renderItems(items) {
             el.list.innerHTML = '';
+            if (!items || items.length === 0) {
+                const tip = document.createElement('div');
+                tip.className = 'p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30';
+                tip.innerHTML = `暂无数据。抓取任务可能尚未运行或外部源暂不可用。<br/>稍后将自动尝试触发一次抓取以填充数据。`;
+                el.list.appendChild(tip);
+                return;
+            }
             items.forEach((it) => {
                 const card = document.createElement('article');
                 card.className = 'p-4 rounded-lg bg-black/20';
@@ -152,6 +159,23 @@ import Layout from '../layouts/Layout.astro';
             el.info.textContent = `第 ${page} / ${totalPages} 页`;
             el.prev.disabled = page <= 1;
             el.next.disabled = page >= totalPages;
+
+            // 若首页为空，尝试触发一次抓取（每 6 小时仅触发 1 次）
+            try {
+                const recent = Number(localStorage.getItem('crawlerTriggeredAt') || '0');
+                const sixHours = 6 * 3600 * 1000;
+                if ((count || 0) === 0 && (!recent || Date.now() - recent > sixHours)) {
+                    const tip = document.createElement('div');
+                    tip.className = 'mt-3 text-xs opacity-70';
+                    tip.textContent = '正在尝试触发抓取以填充数据...';
+                    el.list.appendChild(tip);
+                    const res = await fetch('/.netlify/functions/crawler', { method: 'GET' });
+                    if (res.ok) {
+                        localStorage.setItem('crawlerTriggeredAt', String(Date.now()));
+                        setTimeout(() => fetchPage(), 3000);
+                    }
+                }
+            } catch {}
         }
 
         el.prev.addEventListener('click', (e) => {

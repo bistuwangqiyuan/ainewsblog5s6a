@@ -50,25 +50,37 @@
 
 1. Clone this repository, then run `npm install` in its root directory.
 
-2. For the starter to have full functionality locally (e.g. edge functions, blob store), please ensure you have an up-to-date version of Netlify CLI. Run:
+1. For the starter to have full functionality locally (e.g. edge functions, blob store), please ensure you have an up-to-date version of Netlify CLI. Run:
 
-```
+```bash
 npm install netlify-cli@latest -g
 ```
 
-3. Link your local repository to the deployed Netlify site. This will ensure you're using the same runtime version for both local development and your deployed site.
+1. Link your local repository to the deployed Netlify site. This will ensure you're using the same runtime version for both local development and your deployed site.
 
-```
+```bash
 netlify link
 ```
 
-4. 通过 Netlify CLI 运行 Astro.js 开发服务（或直接运行 `npm run dev`）:
+1. 通过 Netlify CLI 运行 Astro.js 开发服务（或直接运行 `npm run dev`）:
 
-```
+```bash
 netlify dev
 ```
 
 若未自动打开，请访问 [localhost:8888](http://localhost:8888)。
+
+## 故障修复与运维提示（crawler/新闻采集）
+
+- 根因定位：`news_items` 行数为 0，`/.netlify/functions/crawler` 返回 `{inserted:0}`。原因是部分 RSS 源解析/可达性问题导致未产生可插入的数据。
+- 修复内容：
+  - 增强 `netlify/crawler.js`：环境变量校验、并发抓取、请求超时/UA/Accept 头、`content:encoded` 解析、批量 upsert 错误统计、写入 `crawler_logs` 表便于排障。
+  - 首页 `index.astro` 在无数据时给出告警提示，并在 6 小时冷却内最多自动触发一次抓取，真实写库（无伪造/降级）。
+- Netlify 定时：`netlify.toml` 已配置 `[[scheduled.functions]] name="crawler" schedule="0 2 * * *"`（UTC 02:00）。需要在 Netlify 后台确保 Scheduled Functions 已启用，且站点环境变量存在：`PUBLIC_SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`。
+- 安全建议：为 `public.news_items` 启用 RLS（匿名只读、写入仅服务角色）。示例 SQL：
+  - `alter table public.news_items enable row level security;`
+  - `create policy "news_items_select_all" on public.news_items for select using (true);`
+  - 服务写入侧通过 Netlify Function 使用 `SUPABASE_SERVICE_ROLE_KEY` 执行。
 
 ## 数据库初始化
 

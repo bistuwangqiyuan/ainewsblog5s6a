@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2025-08-31T06:28:41.500Z",
+  "generatedAt": "2025-09-02T15:51:40.685Z",
   "deployUrl": null,
-  "supabaseUrl": "https://zzyueuweeoakopuuwfau.supabase.co",
-  "passed": 26,
-  "failed": 1,
+  "supabaseUrl": "https://cuprcattoobasioddbjg.supabase.co",
+  "passed": 17,
+  "failed": 10,
   "warned": 1,
   "skipped": 3,
   "results": [
@@ -88,26 +88,26 @@
     {
       "id": "S0",
       "name": "Supabase 连接可用",
-      "status": "pass",
-      "details": ""
+      "status": "fail",
+      "details": "relation \"public.news_items\" does not exist"
     },
     {
       "id": "S1.news_items",
       "name": "存在表 news_items",
-      "status": "pass",
-      "details": ""
+      "status": "fail",
+      "details": "relation \"public.news_items\" does not exist"
     },
     {
       "id": "S1.posts",
       "name": "存在表 posts",
-      "status": "pass",
-      "details": ""
+      "status": "fail",
+      "details": "relation \"public.posts\" does not exist"
     },
     {
       "id": "S1.comments",
       "name": "存在表 comments",
       "status": "fail",
-      "details": "infinite recursion detected in policy for relation \"users\""
+      "details": "relation \"public.comments\" does not exist"
     },
     {
       "id": "S1.likes",
@@ -130,8 +130,8 @@
     {
       "id": "S1.attachments",
       "name": "存在表 attachments",
-      "status": "pass",
-      "details": ""
+      "status": "fail",
+      "details": "relation \"public.attachments\" does not exist"
     },
     {
       "id": "S1.feedback",
@@ -142,32 +142,32 @@
     {
       "id": "S1.messages",
       "name": "存在表 messages",
-      "status": "pass",
-      "details": ""
+      "status": "fail",
+      "details": "relation \"public.messages\" does not exist"
     },
     {
       "id": "S1.notifications",
       "name": "存在表 notifications",
-      "status": "pass",
-      "details": ""
+      "status": "fail",
+      "details": "relation \"public.notifications\" does not exist"
     },
     {
       "id": "S1.profiles",
       "name": "存在表 profiles",
-      "status": "pass",
-      "details": ""
+      "status": "fail",
+      "details": "relation \"public.profiles\" does not exist"
     },
     {
       "id": "S1.points_ledger",
       "name": "存在表 points_ledger",
-      "status": "pass",
-      "details": ""
+      "status": "fail",
+      "details": "relation \"public.points_ledger\" does not exist"
     },
     {
       "id": "S1.user_levels",
       "name": "存在表 user_levels",
-      "status": "pass",
-      "details": ""
+      "status": "fail",
+      "details": "relation \"public.user_levels\" does not exist"
     },
     {
       "id": "S2",

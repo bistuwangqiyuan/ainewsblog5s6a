@@ -5,32 +5,62 @@
 import { createClient } from '@supabase/supabase-js';
 
 export async function handler(event, context) {
-    const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const SUPA_URL = process.env.PUBLIC_SUPABASE_URL;
+    const SUPA_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!SUPA_URL || !SUPA_SERVICE_KEY) {
+        return json(500, {
+            error: 'Supabase env missing',
+            details: {
+                PUBLIC_SUPABASE_URL: !!SUPA_URL,
+                SUPABASE_SERVICE_ROLE_KEY: !!SUPA_SERVICE_KEY
+            }
+        });
+    }
+
+    const supabase = createClient(SUPA_URL, SUPA_SERVICE_KEY);
     const sources = buildSources();
-    const items = [];
-    for (const s of sources) {
-        try {
-            const list = await fetchSource(s);
-            items.push(...list.map((x) => normalizeItem(x, s.name)));
-        } catch (e) {
-            // 记录但不中断整体任务
-            console.error('source failed', s.name, e);
+
+    // 并发抓取（简单并发池）
+    const concurrency = 8;
+    const queue = sources.slice();
+    const collected = [];
+    async function worker() {
+        while (queue.length) {
+            const s = queue.shift();
+            try {
+                const list = await fetchSource(s);
+                const normalized = list.map((x) => normalizeItem(x, s.name));
+                collected.push(...normalized);
+                await log(supabase, { source: s.name, status: 'ok', message: `fetched=${normalized.length}` });
+            } catch (e) {
+                const msg = e && e.message ? e.message : String(e);
+                console.error('source failed', s.name, msg);
+                await log(supabase, { source: s.name, status: 'error', message: msg.slice(0, 1000) });
+            }
         }
     }
+    await Promise.all(Array.from({ length: concurrency }, () => worker()));
+
     // 去重 by url
     const uniq = new Map();
-    for (const it of items) {
+    for (const it of collected) {
         if (it.url && !uniq.has(it.url)) uniq.set(it.url, it);
     }
     const all = Array.from(uniq.values());
+
     // 批量 upsert（按 200 条一批）
     const batchSize = 200;
+    let upsertErrors = 0;
     for (let i = 0; i < all.length; i += batchSize) {
         const batch = all.slice(i, i + batchSize);
         const { error } = await supabase.from('news_items').upsert(batch, { onConflict: 'url' });
-        if (error) console.error('upsert error', error.message);
+        if (error) {
+            upsertErrors++;
+            console.error('upsert error', error.message);
+            await log(supabase, { source: 'upsert', status: 'error', message: error.message.slice(0, 1000) });
+        }
     }
-    return { statusCode: 200, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ inserted: all.length }) };
+    return json(200, { inserted: all.length, sources: sources.length, errors: upsertErrors });
 }
 
 function buildSources() {
@@ -69,9 +99,22 @@ async function fetchSource(s) {
 }
 
 async function fetchRss(url) {
-    const res = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' } });
-    const xml = await res.text();
-    return parseRss(xml).slice(0, 100);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+        const res = await fetch(url, {
+            headers: {
+                'user-agent': 'Mozilla/5.0',
+                accept: 'application/rss+xml, application/atom+xml, text/xml;q=0.9, */*;q=0.1'
+            },
+            signal: controller.signal
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const xml = await res.text();
+        return parseRss(xml).slice(0, 100);
+    } finally {
+        clearTimeout(timer);
+    }
 }
 
 function parseRss(xml) {
@@ -85,7 +128,7 @@ function parseRss(xml) {
         for (const it of entries) {
             items.push({
                 title: pick(it, 'title'),
-                summary: pick(it, 'description'),
+                summary: pick(it, 'description') || pickNs(it, 'content:encoded'),
                 url: pick(it, 'link'),
                 published_at: pick(it, 'pubDate') || new Date().toISOString()
             });
@@ -118,6 +161,13 @@ function pickAttr(block, tag, attr) {
     return m ? decode(m[1]) : '';
 }
 
+function pickNs(block, tagWithNs) {
+    // 解析带命名空间的标签，例如 content:encoded
+    const safe = tagWithNs.replace(/[:]/g, '\\:');
+    const m = block.match(new RegExp(`<${safe}[^>]*>([\s\S]*?)<\/${safe}>`, 'i'));
+    return m ? decode(strip(m[1])) : '';
+}
+
 function strip(html) {
     return html.replace(/<[^>]+>/g, '').trim();
 }
@@ -142,4 +192,20 @@ function normalizeItem(x, sourceName) {
         created_at: new Date().toISOString(),
         score: null
     };
+}
+
+async function log(supabase, row) {
+    try {
+        await supabase.from('crawler_logs').insert({
+            source: row.source || null,
+            status: row.status || null,
+            message: row.message || null
+        });
+    } catch (_) {
+        // 忽略日志写入失败
+    }
+}
+
+function json(status, body) {
+    return { statusCode: status, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) };
 }
