@@ -1,0 +1,50 @@
+# AI编程新闻网站 - Robots.txt
+# 允许所有搜索引擎抓取
+
+User-agent: *
+Allow: /
+
+# 主要页面
+Allow: /
+Allow: /community
+Allow: /ask
+Allow: /about
+Allow: /post
+
+# 不允许抓取的路径
+Disallow: /api/
+Disallow: /auth
+Disallow: /profile
+Disallow: /messages
+Disallow: /feedback
+Disallow: /edge/
+Disallow: /blobs/
+Disallow: /image-cdn
+
+# Sitemap位置
+Sitemap: https://ainewsblog5s6a.netlify.app/sitemap-index.xml
+Sitemap: https://ainewsblog5s6a.netlify.app/sitemap-0.xml
+
+# 爬取延迟
+Crawl-delay: 1
+
+# 特定搜索引擎优化
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Baiduspider
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 0
+
+User-agent: 360Spider
+Allow: /
+Crawl-delay: 2
+
+User-agent: Sogou web spider
+Allow: /
+Crawl-delay: 2

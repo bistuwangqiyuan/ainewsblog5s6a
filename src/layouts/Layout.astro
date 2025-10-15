@@ -7,21 +7,146 @@ import Footer from '../components/Footer.astro';
 
 interface Props {
     title: string;
+    description?: string;
+    keywords?: string;
+    image?: string;
+    article?: boolean;
+    publishedTime?: string;
+    modifiedTime?: string;
 }
 
-const { title } = Astro.props;
+const { 
+    title,
+    description = "AI 编程新闻与社区：汇聚最新AI技术资讯、编程教程、开发工具、技术论坛与问答、积分等级系统、实时站内消息、用户反馈。为开发者提供高质量的AI编程学习资源和技术交流平台。",
+    keywords = "AI编程,人工智能,机器学习,深度学习,编程新闻,技术社区,开发者论坛,AI资讯,编程教程,技术问答,Supabase,Netlify,Astro",
+    image = "/images/corgi.jpg",
+    article = false,
+    publishedTime,
+    modifiedTime
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const imageURL = new URL(image, Astro.site);
+const siteName = "AI编程新闻";
+const siteUrl = Astro.site?.toString() || "https://ainewsblog5s6a.netlify.app";
 ---
 
 <!doctype html>
 <html lang="zh-CN">
     <head>
         <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        
+        <!-- Primary Meta Tags -->
         <title>{title}</title>
-        <meta name="viewport" content="width=device-width" />
+        <meta name="title" content={title} />
+        <meta name="description" content={description} />
+        <meta name="keywords" content={keywords} />
+        <meta name="author" content="AI编程新闻团队" />
         <meta name="generator" content={Astro.generator} />
-        <meta name="description" content="AI 编程新闻与社区：最新资讯、论坛与问答、积分等级、站内消息、用户反馈。" />
+        <meta name="robots" content="index, follow" />
+        <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+        <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+        
+        <!-- Language and Region -->
+        <meta name="language" content="zh-CN" />
+        <meta name="geo.region" content="CN" />
+        
+        <!-- Canonical URL -->
+        <link rel="canonical" href={canonicalURL} />
+        
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content={article ? "article" : "website"} />
+        <meta property="og:url" content={canonicalURL} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:image" content={imageURL} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content={siteName} />
+        <meta property="og:locale" content="zh_CN" />
+        {article && publishedTime && <meta property="article:published_time" content={publishedTime} />}
+        {article && modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
+        {article && <meta property="article:author" content="AI编程新闻团队" />}
+        
+        <!-- Twitter -->
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={canonicalURL} />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={imageURL} />
+        <meta name="twitter:site" content="@ainewsblog" />
+        <meta name="twitter:creator" content="@ainewsblog" />
+        
+        <!-- Additional Meta Tags -->
+        <meta name="theme-color" content="#000000" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content={siteName} />
+        
+        <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
+        
+        <!-- Preload Critical Resources -->
         <link rel="preload" as="font" type="font/woff2" href={interWoff2} crossorigin />
+        
+        <!-- DNS Prefetch for External Resources -->
+        <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+        
+        <!-- Structured Data (JSON-LD) -->
+        <script type="application/ld+json" set:html={JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": siteName,
+            "url": siteUrl,
+            "description": description,
+            "inLanguage": "zh-CN",
+            "publisher": {
+                "@type": "Organization",
+                "name": siteName,
+                "url": siteUrl,
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": new URL("/favicon.svg", siteUrl)
+                }
+            },
+            "potentialAction": {
+                "@type": "SearchAction",
+                "target": {
+                    "@type": "EntryPoint",
+                    "urlTemplate": `${siteUrl}/?kw={search_term_string}`
+                },
+                "query-input": "required name=search_term_string"
+            }
+        })} />
+        
+        {article && (
+            <script type="application/ld+json" set:html={JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "NewsArticle",
+                "headline": title,
+                "description": description,
+                "image": imageURL.toString(),
+                "datePublished": publishedTime,
+                "dateModified": modifiedTime || publishedTime,
+                "author": {
+                    "@type": "Organization",
+                    "name": siteName
+                },
+                "publisher": {
+                    "@type": "Organization",
+                    "name": siteName,
+                    "logo": {
+                        "@type": "ImageObject",
+                        "url": new URL("/favicon.svg", siteUrl)
+                    }
+                }
+            })} />
+        )}
     </head>
     <body class="antialiased text-white bg-complementary">
         <div class="flex flex-col min-h-screen px-6 bg-noise sm:px-12">
